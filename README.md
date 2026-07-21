@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Flowlist
 
-## Getting Started
+A TickTick-style task management SaaS built with Next.js, Supabase, Paddle, and PostHog.
 
-First, run the development server:
+## Setup
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Supabase
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run [`supabase/schema.sql`](supabase/schema.sql) once — it creates all tables, Row Level Security policies, and a trigger that bootstraps a new user's profile, free subscription, and default "Inbox" list on signup.
+3. Under **Authentication → Email Templates → Confirm signup**, change the link to:
+   ```
+   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/dashboard
+   ```
+4. Copy your project's URL, anon key, and service role key from **Project Settings → API** into `.env.local` (see step 5).
+
+### 3. Paddle
+
+1. Create a [Paddle](https://www.paddle.com) sandbox account.
+2. Create a Pro subscription price under **Catalog → Products**; copy its price ID.
+3. Under **Developer Tools → Authentication**, create a client-side token and an API key.
+4. Under **Developer Tools → Notifications**, create a webhook destination pointing at `<your-site-url>/api/webhooks/paddle` subscribed to `subscription.created`, `subscription.updated`, and `subscription.canceled`; copy its signing secret. (For local testing, tunnel `localhost:3000` with a tool like ngrok first.)
+
+### 4. PostHog
+
+1. Create a project at [posthog.com](https://posthog.com) (or self-hosted).
+2. Copy the project API key and host from **Project Settings**.
+
+### 5. Environment variables
+
+```bash
+cp .env.example .env.local
+```
+
+Fill in every value in `.env.local` from the steps above.
+
+### 6. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## What's here
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Auth**: Supabase email/password auth, `proxy.ts` for optimistic route protection, `lib/dal.ts` as the real authorization boundary.
+- **Tasks**: lists, tasks (due date/priority/notes), one level of subtasks, tags, and Today/Upcoming/All smart views — all via Server Actions with server-side Free-plan limit enforcement (`lib/plan-limits.ts`).
+- **Billing**: Paddle overlay checkout, a webhook that syncs subscription status into Supabase, and a customer portal link for managing/cancelling.
+- **Analytics**: PostHog pageviews plus custom events for signup, list/task creation, task completion, and the checkout → subscription lifecycle.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `supabase/schema.sql` for the full database schema.
