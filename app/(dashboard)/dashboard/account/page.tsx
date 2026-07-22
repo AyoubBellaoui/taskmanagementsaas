@@ -9,23 +9,23 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto max-w-lg p-6">
-      <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
         Account
       </h1>
-      <p className="mt-1 text-sm text-zinc-500">{email}</p>
+      <p className="mt-1 text-sm text-slate-500">{email}</p>
 
-      <div className="mt-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium">Current plan</p>
-            <p className="text-xs capitalize text-zinc-500">
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Current plan</p>
+            <p className="text-xs capitalize text-slate-500">
               {subscription.plan} · {subscription.status}
             </p>
           </div>
           {!isPro && (
             <Link
               href="/pricing"
-              className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
             >
               Upgrade to Pro
             </Link>
@@ -33,7 +33,7 @@ export default async function AccountPage() {
         </div>
 
         {subscription.current_period_end && (
-          <p className="mt-2 text-xs text-zinc-500">
+          <p className="mt-2 text-xs text-slate-500">
             {subscription.cancel_at_period_end ? "Cancels" : "Renews"} on{" "}
             {new Date(subscription.current_period_end).toLocaleDateString()}
           </p>
@@ -43,7 +43,7 @@ export default async function AccountPage() {
           <form action={openBillingPortal} className="mt-4">
             <button
               type="submit"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium dark:border-zinc-700"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Manage billing
             </button>

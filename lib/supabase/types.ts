@@ -1,4 +1,5 @@
 export type Priority = "none" | "low" | "medium" | "high";
+export type Recurrence = "none" | "daily" | "weekly" | "monthly";
 export type PlanTier = "free" | "pro";
 export type SubscriptionStatus =
   | "active"
@@ -67,6 +68,7 @@ export interface Database {
           notes: string | null;
           due_date: string | null;
           priority: Priority;
+          recurrence: Recurrence;
           completed: boolean;
           completed_at: string | null;
           position: number;

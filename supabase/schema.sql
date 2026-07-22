@@ -70,6 +70,7 @@ create table public.tasks (
   notes text,
   due_date date,
   priority text not null default 'none' check (priority in ('none', 'low', 'medium', 'high')),
+  recurrence text not null default 'none' check (recurrence in ('none', 'daily', 'weekly', 'monthly')),
   completed boolean not null default false,
   completed_at timestamptz,
   position integer not null default 0,

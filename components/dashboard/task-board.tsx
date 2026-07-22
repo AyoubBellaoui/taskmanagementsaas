@@ -1,74 +1,81 @@
 import { NewTaskForm } from "@/components/dashboard/new-task-form";
 import { TaskList } from "@/components/dashboard/task-list";
+import { InteractiveTaskList } from "@/components/dashboard/interactive-task-list";
 import { TaskDetailPanel } from "@/components/dashboard/task-detail-panel";
+import { CollapsibleSection } from "@/components/dashboard/collapsible-section";
+import { SelectionProvider } from "@/components/dashboard/selection-context";
+import { BulkActionBar } from "@/components/dashboard/bulk-action-bar";
 import type { TaskWithTags } from "@/lib/queries/tasks";
 import type { List } from "@/lib/queries/lists";
-
-function groupByList(tasks: TaskWithTags[]) {
-  const groups = new Map<string, { list: TaskWithTags["list"]; tasks: TaskWithTags[] }>();
-  for (const task of tasks) {
-    const key = task.list?.id ?? "none";
-    if (!groups.has(key)) groups.set(key, { list: task.list, tasks: [] });
-    groups.get(key)!.tasks.push(task);
-  }
-  return Array.from(groups.values());
-}
+import type { Tag } from "@/lib/queries/tags";
 
 export function TaskBoard({
   title,
   tasks,
+  completedTasks = [],
   lists,
+  availableTags = [],
   basePath,
   selectedTaskId,
   emptyMessage = "Nothing here. Enjoy the quiet.",
   defaultListId,
   defaultDueDate,
   grouped = false,
+  reorderable = false,
 }: {
   title: string;
   tasks: TaskWithTags[];
+  completedTasks?: TaskWithTags[];
   lists: List[];
+  availableTags?: Tag[];
   basePath: string;
   selectedTaskId?: string;
   emptyMessage?: string;
   defaultListId?: string;
   defaultDueDate?: string;
   grouped?: boolean;
+  reorderable?: boolean;
 }) {
   return (
     <div className="flex h-full">
-      <div className="flex-1 overflow-y-auto p-6">
-        <h1 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-          {title}
-        </h1>
-
-        <NewTaskForm
-          lists={lists}
-          defaultListId={defaultListId}
-          defaultDueDate={defaultDueDate}
-        />
-
-        {tasks.length === 0 ? (
-          <p className="px-2 py-6 text-sm text-zinc-400">{emptyMessage}</p>
-        ) : grouped ? (
-          <div className="flex flex-col gap-6">
-            {groupByList(tasks).map((group) => (
-              <div key={group.list?.id ?? "none"}>
-                <h2 className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  {group.list?.name ?? "No list"}
-                </h2>
-                <TaskList tasks={group.tasks} basePath={basePath} />
-              </div>
-            ))}
+      <SelectionProvider>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="mb-5 flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-2">
+              <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">{title}</h1>
+              {tasks.length > 0 && (
+                <span className="text-sm tabular-nums text-slate-400 dark:text-slate-600">
+                  {tasks.length}
+                </span>
+              )}
+            </div>
+            <BulkActionBar lists={lists} />
           </div>
-        ) : (
-          <TaskList tasks={tasks} basePath={basePath} emptyMessage={emptyMessage} />
-        )}
-      </div>
 
-      {selectedTaskId && (
-        <TaskDetailPanel taskId={selectedTaskId} basePath={basePath} />
-      )}
+          <NewTaskForm
+            lists={lists}
+            defaultListId={defaultListId}
+            defaultDueDate={defaultDueDate}
+          />
+
+          <InteractiveTaskList
+            tasks={tasks}
+            basePath={basePath}
+            emptyMessage={emptyMessage}
+            grouped={grouped}
+            reorderable={reorderable}
+            availableTags={availableTags}
+          />
+
+          <CollapsibleSection label="Completed" count={completedTasks.length}>
+            <TaskList tasks={completedTasks} basePath={basePath} />
+          </CollapsibleSection>
+        </div>
+
+        {selectedTaskId && (
+          <TaskDetailPanel taskId={selectedTaskId} basePath={basePath} />
+        )}
+      </SelectionProvider>
     </div>
   );
 }

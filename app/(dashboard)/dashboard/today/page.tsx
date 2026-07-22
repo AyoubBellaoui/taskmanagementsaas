@@ -1,6 +1,7 @@
 import { verifySession } from "@/lib/dal";
-import { getTodayTasks } from "@/lib/queries/tasks";
+import { getTodayCompletedTasks, getTodayTasks } from "@/lib/queries/tasks";
 import { getLists } from "@/lib/queries/lists";
+import { getTags } from "@/lib/queries/tags";
 import { TaskBoard } from "@/components/dashboard/task-board";
 
 export default async function TodayPage({
@@ -11,9 +12,11 @@ export default async function TodayPage({
   const { userId } = await verifySession();
   const { task } = await searchParams;
 
-  const [tasks, lists] = await Promise.all([
+  const [tasks, completedTasks, lists, tags] = await Promise.all([
     getTodayTasks(userId),
+    getTodayCompletedTasks(userId),
     getLists(userId),
+    getTags(userId),
   ]);
   const defaultListId = lists.find((l) => l.is_default)?.id ?? lists[0]?.id;
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -22,7 +25,9 @@ export default async function TodayPage({
     <TaskBoard
       title="Today"
       tasks={tasks}
+      completedTasks={completedTasks}
       lists={lists}
+      availableTags={tags}
       basePath="/dashboard/today"
       selectedTaskId={task}
       defaultListId={defaultListId}

@@ -29,38 +29,61 @@ function todayISODate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// "Today" = due today or overdue, not completed. Compares against the
-// database server's date, not the visitor's local timezone — acceptable
-// simplification for this app's scope.
-export async function getTodayTasks(userId: string): Promise<TaskWithTags[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("tasks")
-    .select(TASK_SELECT)
-    .eq("user_id", userId)
-    .is("parent_task_id", null)
-    .eq("completed", false)
-    .lte("due_date", todayISODate())
-    .order("due_date", { ascending: true });
-  return ((data ?? []) as unknown as RawTaskRow[]).map(normalize);
-}
+type Scope = { listId?: string; dueBefore?: string; dueAfterExclusive?: string };
 
-export async function getUpcomingTasks(userId: string): Promise<TaskWithTags[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("tasks")
-    .select(TASK_SELECT)
-    .eq("user_id", userId)
-    .is("parent_task_id", null)
-    .eq("completed", false)
-    .gt("due_date", todayISODate())
-    .order("due_date", { ascending: true });
-  return ((data ?? []) as unknown as RawTaskRow[]).map(normalize);
-}
-
-// "All" / inbox view: every incomplete top-level task across all lists.
-export async function getAllIncompleteTasks(
+// Shared fetch behind every smart view: incomplete tasks sort soonest-due
+// first (undated tasks last); completed tasks sort most-recently-finished
+// first. Scoping (list/date range) is layered on top per view.
+async function queryTasks(
   userId: string,
+  completed: boolean,
+  scope: Scope = {},
+): Promise<TaskWithTags[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("tasks")
+    .select(TASK_SELECT)
+    .eq("user_id", userId)
+    .is("parent_task_id", null)
+    .eq("completed", completed);
+
+  if (scope.listId) query = query.eq("list_id", scope.listId);
+  if (scope.dueBefore) query = query.lte("due_date", scope.dueBefore);
+  if (scope.dueAfterExclusive) query = query.gt("due_date", scope.dueAfterExclusive);
+
+  const { data } = completed
+    ? await query.order("completed_at", { ascending: false }).limit(50)
+    : await query.order("due_date", { ascending: true });
+
+  return ((data ?? []) as unknown as RawTaskRow[]).map(normalize);
+}
+
+// "Today" = due today or overdue. Compares against the database server's
+// date, not the visitor's local timezone — acceptable simplification here.
+export const getTodayTasks = (userId: string) =>
+  queryTasks(userId, false, { dueBefore: todayISODate() });
+export const getTodayCompletedTasks = (userId: string) =>
+  queryTasks(userId, true, { dueBefore: todayISODate() });
+
+export const getUpcomingTasks = (userId: string) =>
+  queryTasks(userId, false, { dueAfterExclusive: todayISODate() });
+export const getUpcomingCompletedTasks = (userId: string) =>
+  queryTasks(userId, true, { dueAfterExclusive: todayISODate() });
+
+// "All" / inbox view: every task across all lists, no date filter.
+export const getAllIncompleteTasks = (userId: string) => queryTasks(userId, false);
+export const getAllCompletedTasks = (userId: string) => queryTasks(userId, true);
+
+export const getListTasks = (userId: string, listId: string) =>
+  queryTasks(userId, false, { listId });
+export const getListCompletedTasks = (userId: string, listId: string) =>
+  queryTasks(userId, true, { listId });
+
+// Calendar view: every task (complete or not) due within a date range.
+export async function getTasksInRange(
+  userId: string,
+  startISO: string,
+  endISO: string,
 ): Promise<TaskWithTags[]> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -68,24 +91,9 @@ export async function getAllIncompleteTasks(
     .select(TASK_SELECT)
     .eq("user_id", userId)
     .is("parent_task_id", null)
-    .eq("completed", false)
-    .order("created_at", { ascending: false });
-  return ((data ?? []) as unknown as RawTaskRow[]).map(normalize);
-}
-
-export async function getListTasks(
-  userId: string,
-  listId: string,
-): Promise<TaskWithTags[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("tasks")
-    .select(TASK_SELECT)
-    .eq("user_id", userId)
-    .eq("list_id", listId)
-    .is("parent_task_id", null)
-    .order("completed", { ascending: true })
-    .order("position", { ascending: true });
+    .gte("due_date", startISO)
+    .lte("due_date", endISO)
+    .order("due_date", { ascending: true });
   return ((data ?? []) as unknown as RawTaskRow[]).map(normalize);
 }
 
@@ -125,6 +133,48 @@ export async function countActiveTasks(userId: string): Promise<number> {
     .eq("user_id", userId)
     .eq("completed", false);
   return count ?? 0;
+}
+
+// Sidebar nav badge counts (incomplete, top-level tasks per smart view).
+export async function getViewCounts(
+  userId: string,
+): Promise<{ all: number; today: number; upcoming: number }> {
+  const supabase = await createClient();
+  const today = todayISODate();
+  const base = () =>
+    supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("parent_task_id", null)
+      .eq("completed", false);
+
+  const [{ count: all }, { count: todayCount }, { count: upcoming }] = await Promise.all([
+    base(),
+    base().lte("due_date", today),
+    base().gt("due_date", today),
+  ]);
+
+  return { all: all ?? 0, today: todayCount ?? 0, upcoming: upcoming ?? 0 };
+}
+
+// Sidebar per-list incomplete task counts.
+export async function getListTaskCounts(
+  userId: string,
+): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tasks")
+    .select("list_id")
+    .eq("user_id", userId)
+    .is("parent_task_id", null)
+    .eq("completed", false);
+
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    counts[row.list_id] = (counts[row.list_id] ?? 0) + 1;
+  }
+  return counts;
 }
 
 export const PRIORITY_LABEL: Record<Priority, string> = {

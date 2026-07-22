@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 export const PrioritySchema = z.enum(["none", "low", "medium", "high"]);
+export const RecurrenceSchema = z.enum(["none", "daily", "weekly", "monthly"]);
 
 export const TaskSchema = z.object({
   title: z
@@ -12,6 +13,7 @@ export const TaskSchema = z.object({
   listId: z.uuid({ error: "Pick a valid list." }),
   dueDate: z.string().trim().optional(),
   priority: PrioritySchema.optional(),
+  recurrence: RecurrenceSchema.optional(),
 });
 
 export type TaskState =
@@ -22,6 +24,7 @@ export type TaskState =
         listId?: string[];
         dueDate?: string[];
         priority?: string[];
+        recurrence?: string[];
       };
       message?: string;
     }

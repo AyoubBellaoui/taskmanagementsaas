@@ -11,11 +11,11 @@ export function TaskList({
   emptyMessage?: string;
 }) {
   if (tasks.length === 0) {
-    return <p className="px-2 py-6 text-sm text-zinc-400">{emptyMessage}</p>;
+    return <p className="px-2 py-6 text-sm text-slate-400 dark:text-slate-600">{emptyMessage}</p>;
   }
 
   return (
-    <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
+    <div className="flex flex-col gap-0.5">
       {tasks.map((task) => (
         <TaskItem key={task.id} task={task} basePath={basePath} />
       ))}
