@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  deleteTask,
   toggleTaskComplete,
   updateTask,
   createSubtask,
@@ -10,7 +9,7 @@ import {
   createTag,
   detachTagFromTask,
 } from "@/app/(dashboard)/dashboard/tags/actions";
-import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
+import { DeleteTaskButton } from "@/components/dashboard/delete-task-button";
 import { getSubtasks, getTaskById } from "@/lib/queries/tasks";
 import { getLists } from "@/lib/queries/lists";
 import { getTags } from "@/lib/queries/tags";
@@ -299,11 +298,7 @@ export async function TaskDetailPanel({
         </form>
       </div>
 
-      <form
-        action={deleteTask}
-        className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800"
-      >
-        <input type="hidden" name="id" value={task.id} />
+      <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
         {currentList && (
           <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">
             <ListIcon />
@@ -315,13 +310,8 @@ export async function TaskDetailPanel({
             Due {formatShortDate(task.due_date)}
           </span>
         )}
-        <ConfirmSubmitButton
-          confirmText="Delete this task? This can't be undone."
-          className="text-sm text-rose-600 hover:underline"
-        >
-          Delete
-        </ConfirmSubmitButton>
-      </form>
+        <DeleteTaskButton task={task} basePath={basePath} />
+      </div>
     </aside>
   );
 }

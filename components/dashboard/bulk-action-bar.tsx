@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useSelection } from "@/components/dashboard/selection-context";
+import { useToast } from "@/components/dashboard/toast-context";
 import {
   bulkCompleteTasks,
   bulkDeleteTasks,
@@ -9,8 +10,13 @@ import {
 } from "@/app/(dashboard)/dashboard/tasks/actions";
 import type { List } from "@/lib/queries/lists";
 
+function plural(count: number) {
+  return count === 1 ? "task" : "tasks";
+}
+
 export function BulkActionBar({ lists }: { lists: List[] }) {
   const { selectMode, selectedIds, toggleSelectMode, clearSelection } = useSelection();
+  const { showToast } = useToast();
   const [isPending, startTransition] = useTransition();
   const count = selectedIds.length;
 
@@ -37,6 +43,7 @@ export function BulkActionBar({ lists }: { lists: List[] }) {
         onClick={() =>
           startTransition(async () => {
             await bulkCompleteTasks(selectedIds);
+            showToast(`${count} ${plural(count)} completed`);
             clearSelection();
           })
         }
@@ -50,8 +57,10 @@ export function BulkActionBar({ lists }: { lists: List[] }) {
         onChange={(e) => {
           const listId = e.target.value;
           if (!listId) return;
+          const listName = lists.find((l) => l.id === listId)?.name ?? "list";
           startTransition(async () => {
             await bulkMoveTasks(selectedIds, listId);
+            showToast(`${count} ${plural(count)} moved to ${listName}`);
             clearSelection();
           });
         }}
@@ -68,9 +77,10 @@ export function BulkActionBar({ lists }: { lists: List[] }) {
         type="button"
         disabled={isPending || count === 0}
         onClick={() => {
-          if (!window.confirm(`Delete ${count} task${count === 1 ? "" : "s"}? This can't be undone.`)) return;
+          if (!window.confirm(`Delete ${count} ${plural(count)}? This can't be undone.`)) return;
           startTransition(async () => {
             await bulkDeleteTasks(selectedIds);
+            showToast(`${count} ${plural(count)} deleted`);
             clearSelection();
           });
         }}

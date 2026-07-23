@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createTask } from "@/app/(dashboard)/dashboard/tasks/actions";
+import { DateQuickPicker } from "@/components/dashboard/date-quick-picker";
 import type { List } from "@/lib/queries/lists";
 
 function PlusIcon() {
@@ -83,8 +84,7 @@ export function NewTaskForm({
               </option>
             ))}
           </select>
-          <input
-            type="date"
+          <DateQuickPicker
             name="dueDate"
             defaultValue={defaultDueDate}
             className="rounded-md border border-slate-200 bg-transparent px-2 py-1 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300"

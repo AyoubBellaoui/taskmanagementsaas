@@ -203,6 +203,44 @@ export async function deleteTask(formData: FormData) {
   revalidatePath("/dashboard", "layout");
 }
 
+// Undo for deleteTask: re-creates a task from a client-held snapshot rather
+// than un-deleting the row (simplest correct option — deleteTask doesn't
+// soft-delete, so there's nothing to restore server-side).
+export async function restoreTask(snapshot: {
+  title: string;
+  notes: string | null;
+  listId: string;
+  dueDate: string | null;
+  priority: string;
+  recurrence: string;
+  tagIds: string[];
+}) {
+  const { userId } = await verifySession();
+  const supabase = await createClient();
+
+  const { data: task } = await supabase
+    .from("tasks")
+    .insert({
+      user_id: userId,
+      list_id: snapshot.listId,
+      title: snapshot.title,
+      notes: snapshot.notes,
+      due_date: snapshot.dueDate,
+      priority: snapshot.priority,
+      recurrence: snapshot.recurrence,
+    })
+    .select("id")
+    .single();
+
+  if (task && snapshot.tagIds.length > 0) {
+    await supabase
+      .from("task_tags")
+      .insert(snapshot.tagIds.map((tagId) => ({ task_id: task.id, tag_id: tagId })));
+  }
+
+  revalidatePath("/dashboard", "layout");
+}
+
 // Drag-and-drop reordering within a single list: `taskIds` is the full,
 // already-reordered list of task ids for that list; each gets its `position`
 // set to its index.

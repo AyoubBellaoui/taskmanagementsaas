@@ -3,6 +3,7 @@ import { getLists } from "@/lib/queries/lists";
 import { getListTaskCounts, getViewCounts } from "@/lib/queries/tasks";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { CommandPalette } from "@/components/dashboard/command-palette";
+import { ToastProvider } from "@/components/dashboard/toast-context";
 
 export default async function DashboardLayout({
   children,
@@ -22,16 +23,18 @@ export default async function DashboardLayout({
   const defaultListId = lists.find((l) => l.is_default)?.id ?? lists[0]?.id;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
-      <Sidebar
-        lists={lists}
-        listCounts={listCounts}
-        viewCounts={viewCounts}
-        plan={subscription.plan}
-        email={email}
-      />
-      <main className="flex-1 overflow-hidden">{children}</main>
-      <CommandPalette lists={lists} defaultListId={defaultListId} />
-    </div>
+    <ToastProvider>
+      <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <Sidebar
+          lists={lists}
+          listCounts={listCounts}
+          viewCounts={viewCounts}
+          plan={subscription.plan}
+          email={email}
+        />
+        <main className="flex-1 overflow-hidden">{children}</main>
+        <CommandPalette lists={lists} defaultListId={defaultListId} />
+      </div>
+    </ToastProvider>
   );
 }
