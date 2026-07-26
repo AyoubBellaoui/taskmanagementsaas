@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { TaskItem } from "@/components/dashboard/task-item";
+import { TaskRow } from "@/components/dashboard/task-row";
 import { SortableTaskList } from "@/components/dashboard/sortable-task-list";
 import { useSelection } from "@/components/dashboard/selection-context";
 import type { TaskWithTags } from "@/lib/queries/tasks";
 import type { Tag } from "@/lib/queries/tags";
+import type { List } from "@/lib/queries/lists";
 import type { Priority } from "@/lib/supabase/types";
 
 type SortKey = "manual" | "due" | "priority" | "alpha";
@@ -35,15 +36,24 @@ function groupByList(tasks: TaskWithTags[]) {
   return Array.from(groups.values());
 }
 
-function PlainRows({ tasks, basePath }: { tasks: TaskWithTags[]; basePath: string }) {
+function PlainRows({
+  tasks,
+  basePath,
+  lists,
+}: {
+  tasks: TaskWithTags[];
+  basePath: string;
+  lists: List[];
+}) {
   const { selectMode, isSelected, toggleSelected } = useSelection();
   return (
     <div className="flex flex-col gap-0.5">
       {tasks.map((task) => (
-        <TaskItem
+        <TaskRow
           key={task.id}
           task={task}
           basePath={basePath}
+          lists={lists}
           selectMode={selectMode}
           selected={isSelected(task.id)}
           onToggleSelect={() => toggleSelected(task.id)}
@@ -56,6 +66,7 @@ function PlainRows({ tasks, basePath }: { tasks: TaskWithTags[]; basePath: strin
 export function InteractiveTaskList({
   tasks,
   basePath,
+  lists,
   emptyMessage = "Nothing here.",
   grouped = false,
   reorderable = false,
@@ -63,6 +74,7 @@ export function InteractiveTaskList({
 }: {
   tasks: TaskWithTags[];
   basePath: string;
+  lists: List[];
   emptyMessage?: string;
   grouped?: boolean;
   reorderable?: boolean;
@@ -143,14 +155,14 @@ export function InteractiveTaskList({
               <h2 className="mb-1 px-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-600">
                 {group.list?.name ?? "No list"}
               </h2>
-              <PlainRows tasks={group.tasks} basePath={basePath} />
+              <PlainRows tasks={group.tasks} basePath={basePath} lists={lists} />
             </div>
           ))}
         </div>
       ) : useDnd ? (
-        <SortableTaskList tasks={visible} basePath={basePath} />
+        <SortableTaskList tasks={visible} basePath={basePath} lists={lists} />
       ) : (
-        <PlainRows tasks={visible} basePath={basePath} />
+        <PlainRows tasks={visible} basePath={basePath} lists={lists} />
       )}
     </div>
   );

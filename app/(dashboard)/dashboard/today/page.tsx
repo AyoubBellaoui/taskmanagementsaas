@@ -3,6 +3,7 @@ import { getTodayCompletedTasks, getTodayTasks } from "@/lib/queries/tasks";
 import { getLists } from "@/lib/queries/lists";
 import { getTags } from "@/lib/queries/tags";
 import { TaskBoard } from "@/components/dashboard/task-board";
+import { TaskDetailPanel } from "@/components/dashboard/task-detail-panel";
 
 export default async function TodayPage({
   searchParams,
@@ -29,7 +30,7 @@ export default async function TodayPage({
       lists={lists}
       availableTags={tags}
       basePath="/dashboard/today"
-      selectedTaskId={task}
+      detailPanel={task && <TaskDetailPanel taskId={task} basePath="/dashboard/today" />}
       defaultListId={defaultListId}
       defaultDueDate={todayISO}
       emptyMessage="Nothing due today. Nice."

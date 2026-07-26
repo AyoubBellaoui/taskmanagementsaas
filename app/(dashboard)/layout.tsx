@@ -4,6 +4,7 @@ import { getListTaskCounts, getViewCounts } from "@/lib/queries/tasks";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import { ToastProvider } from "@/components/dashboard/toast-context";
+import { AssistantWidget } from "@/components/dashboard/assistant-widget";
 
 export default async function DashboardLayout({
   children,
@@ -21,6 +22,7 @@ export default async function DashboardLayout({
     getListTaskCounts(userId),
   ]);
   const defaultListId = lists.find((l) => l.is_default)?.id ?? lists[0]?.id;
+  const isPro = subscription.plan === "pro" && subscription.status === "active";
 
   return (
     <ToastProvider>
@@ -34,6 +36,7 @@ export default async function DashboardLayout({
         />
         <main className="flex-1 overflow-hidden">{children}</main>
         <CommandPalette lists={lists} defaultListId={defaultListId} />
+        <AssistantWidget isPro={isPro} />
       </div>
     </ToastProvider>
   );

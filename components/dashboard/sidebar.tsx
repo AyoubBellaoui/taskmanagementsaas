@@ -7,6 +7,7 @@ import { NewListForm } from "@/components/dashboard/new-list-form";
 import { ConfirmSubmitButton } from "@/components/dashboard/confirm-submit-button";
 import { LogoutButton } from "@/components/dashboard/logout-button";
 import { openCommandPalette } from "@/components/dashboard/command-palette";
+import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import type { List } from "@/lib/queries/lists";
 import type { PlanTier } from "@/lib/supabase/types";
 
@@ -212,6 +213,12 @@ export function Sidebar({
       </div>
 
       <div className="mt-4 border-t border-slate-100 px-2 pt-3 dark:border-slate-800/80">
+        <div className="flex items-center justify-between px-2 pb-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-600">
+            Theme
+          </span>
+          <ThemeToggle />
+        </div>
         <Link
           href="/dashboard/account"
           className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/5"

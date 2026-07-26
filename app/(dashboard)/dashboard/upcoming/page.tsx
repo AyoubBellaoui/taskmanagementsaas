@@ -3,6 +3,7 @@ import { getUpcomingCompletedTasks, getUpcomingTasks } from "@/lib/queries/tasks
 import { getLists } from "@/lib/queries/lists";
 import { getTags } from "@/lib/queries/tags";
 import { TaskBoard } from "@/components/dashboard/task-board";
+import { TaskDetailPanel } from "@/components/dashboard/task-detail-panel";
 
 export default async function UpcomingPage({
   searchParams,
@@ -28,7 +29,7 @@ export default async function UpcomingPage({
       lists={lists}
       availableTags={tags}
       basePath="/dashboard/upcoming"
-      selectedTaskId={task}
+      detailPanel={task && <TaskDetailPanel taskId={task} basePath="/dashboard/upcoming" />}
       defaultListId={defaultListId}
       emptyMessage="Nothing scheduled ahead."
     />

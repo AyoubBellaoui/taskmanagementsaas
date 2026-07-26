@@ -43,7 +43,7 @@ export async function createList(
   });
   if (error) return { message: "Could not create list." };
 
-  await captureServerEvent(userId, "list_created");
+  captureServerEvent(userId, "list_created");
   revalidatePath("/dashboard", "layout");
 }
 

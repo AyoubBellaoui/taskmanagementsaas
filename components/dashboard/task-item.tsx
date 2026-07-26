@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { toggleTaskComplete } from "@/app/(dashboard)/dashboard/tasks/actions";
+import { CompleteToggle } from "@/components/dashboard/complete-toggle";
+import { DeleteTaskIconButton } from "@/components/dashboard/delete-task-button";
 import type { TaskWithTags } from "@/lib/queries/tasks";
 
 const PRIORITY_DOT: Record<string, string> = {
@@ -92,20 +93,24 @@ export function TaskItem({
         </button>
       )}
 
-      <form action={toggleTaskComplete}>
-        <input type="hidden" name="taskId" value={task.id} />
-        <button
-          type="submit"
-          aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
-          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors ${
-            task.completed
-              ? "border-emerald-500 bg-emerald-500 text-white"
-              : "border-slate-300 text-transparent hover:border-indigo-400 dark:border-slate-600"
-          }`}
-        >
-          <CheckIcon />
-        </button>
-      </form>
+      <CompleteToggle
+        task={{
+          id: task.id,
+          completed: task.completed,
+          listId: task.list_id,
+          title: task.title,
+          notes: task.notes,
+          dueDate: task.due_date,
+          priority: task.priority,
+          recurrence: task.recurrence,
+          parentTaskId: task.parent_task_id,
+          tagIds: task.tags.map((t) => t.id),
+        }}
+        completeClassName="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors border-emerald-500 bg-emerald-500 text-white"
+        incompleteClassName="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors border-slate-300 text-transparent hover:border-indigo-400 dark:border-slate-600"
+        completeContent={<CheckIcon />}
+        incompleteContent={<CheckIcon />}
+      />
 
       {task.priority !== "none" && !task.completed && (
         <span
@@ -154,6 +159,8 @@ export function TaskItem({
           {formatDueDate(task.due_date)}
         </span>
       )}
+
+      <DeleteTaskIconButton task={task} basePath={basePath} />
     </div>
   );
 }

@@ -17,10 +17,18 @@ export function NewTaskForm({
   lists,
   defaultListId,
   defaultDueDate,
+  onOptimisticCreate,
 }: {
   lists: List[];
   defaultListId?: string;
   defaultDueDate?: string;
+  onOptimisticCreate?: (data: {
+    title: string;
+    listId: string;
+    dueDate?: string;
+    priority?: string;
+    recurrence?: string;
+  }) => void;
 }) {
   const [state, action, pending] = useActionState(createTask, undefined);
   const [expanded, setExpanded] = useState(false);
@@ -52,6 +60,20 @@ export function NewTaskForm({
     <form
       ref={formRef}
       action={action}
+      onSubmit={(e) => {
+        const formData = new FormData(e.currentTarget);
+        const title = (formData.get("title") as string | null)?.trim();
+        const listId = (formData.get("listId") as string | null) || defaultListId;
+        if (title && listId) {
+          onOptimisticCreate?.({
+            title,
+            listId,
+            dueDate: (formData.get("dueDate") as string) || undefined,
+            priority: (formData.get("priority") as string) || undefined,
+            recurrence: (formData.get("recurrence") as string) || undefined,
+          });
+        }
+      }}
       className={`mb-5 rounded-xl border transition-colors ${
         expanded
           ? "border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"

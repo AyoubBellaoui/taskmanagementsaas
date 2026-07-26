@@ -1,13 +1,16 @@
-import { TaskItem } from "@/components/dashboard/task-item";
+import { TaskRow } from "@/components/dashboard/task-row";
 import type { TaskWithTags } from "@/lib/queries/tasks";
+import type { List } from "@/lib/queries/lists";
 
 export function TaskList({
   tasks,
   basePath,
+  lists = [],
   emptyMessage = "Nothing here.",
 }: {
   tasks: TaskWithTags[];
   basePath: string;
+  lists?: List[];
   emptyMessage?: string;
 }) {
   if (tasks.length === 0) {
@@ -17,7 +20,7 @@ export function TaskList({
   return (
     <div className="flex flex-col gap-0.5">
       {tasks.map((task) => (
-        <TaskItem key={task.id} task={task} basePath={basePath} />
+        <TaskRow key={task.id} task={task} basePath={basePath} lists={lists} />
       ))}
     </div>
   );

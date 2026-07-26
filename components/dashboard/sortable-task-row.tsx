@@ -2,8 +2,9 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { TaskItem } from "@/components/dashboard/task-item";
+import { TaskRow } from "@/components/dashboard/task-row";
 import type { TaskWithTags } from "@/lib/queries/tasks";
+import type { List } from "@/lib/queries/lists";
 
 function DragHandleIcon() {
   return (
@@ -21,9 +22,11 @@ function DragHandleIcon() {
 export function SortableTaskRow({
   task,
   basePath,
+  lists,
 }: {
   task: TaskWithTags;
   basePath: string;
+  lists: List[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -36,19 +39,23 @@ export function SortableTaskRow({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center">
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        aria-label="Drag to reorder"
-        className="shrink-0 cursor-grab touch-none px-1 text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-700 dark:hover:text-slate-500"
-      >
-        <DragHandleIcon />
-      </button>
-      <div className="min-w-0 flex-1">
-        <TaskItem task={task} basePath={basePath} />
-      </div>
+    <div ref={setNodeRef} style={style}>
+      <TaskRow
+        task={task}
+        basePath={basePath}
+        lists={lists}
+        dragHandle={
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label="Drag to reorder"
+            className="shrink-0 cursor-grab touch-none text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-700 dark:hover:text-slate-500"
+          >
+            <DragHandleIcon />
+          </button>
+        }
+      />
     </div>
   );
 }

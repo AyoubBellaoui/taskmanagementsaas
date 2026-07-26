@@ -41,7 +41,7 @@ export async function signup(
   }
 
   if (data.user) {
-    await captureServerEvent(data.user.id, "user_signed_up");
+    captureServerEvent(data.user.id, "user_signed_up");
   }
 
   // No redirect here: Supabase requires email confirmation before a

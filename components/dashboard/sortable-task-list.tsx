@@ -13,13 +13,16 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-ki
 import { SortableTaskRow } from "@/components/dashboard/sortable-task-row";
 import { reorderTasks } from "@/app/(dashboard)/dashboard/tasks/actions";
 import type { TaskWithTags } from "@/lib/queries/tasks";
+import type { List } from "@/lib/queries/lists";
 
 export function SortableTaskList({
   tasks,
   basePath,
+  lists,
 }: {
   tasks: TaskWithTags[];
   basePath: string;
+  lists: List[];
 }) {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const [items, setItems] = useState(() => tasks.map((t) => t.id));
@@ -54,12 +57,19 @@ export function SortableTaskList({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      id="sortable-task-list"
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-0.5">
           {items.map((id) => {
             const task = byId.get(id);
-            return task ? <SortableTaskRow key={id} task={task} basePath={basePath} /> : null;
+            return task ? (
+              <SortableTaskRow key={id} task={task} basePath={basePath} lists={lists} />
+            ) : null;
           })}
         </div>
       </SortableContext>

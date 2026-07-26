@@ -8,7 +8,7 @@ import { captureServerEvent } from "@/lib/posthog-server";
 import { FREE_PLAN_ACTIVE_TASK_LIMIT } from "@/lib/plan-limits";
 import { countActiveTasks } from "@/lib/queries/tasks";
 import { TaskSchema, type TaskState } from "@/lib/validations/tasks";
-import type { Recurrence } from "@/lib/supabase/types";
+import type { Priority, Recurrence } from "@/lib/supabase/types";
 
 function nextDueDate(dueDate: string, recurrence: Recurrence): string {
   const date = new Date(`${dueDate}T00:00:00`);
@@ -60,7 +60,7 @@ export async function createTask(
   });
   if (error) return { message: "Could not create task." };
 
-  await captureServerEvent(userId, "task_created");
+  captureServerEvent(userId, "task_created");
   revalidatePath("/dashboard", "layout");
 }
 
@@ -95,7 +95,7 @@ export async function createSubtask(formData: FormData) {
     title,
   });
 
-  await captureServerEvent(userId, "task_created", { is_subtask: true });
+  captureServerEvent(userId, "task_created", { is_subtask: true });
   revalidatePath("/dashboard", "layout");
 }
 
@@ -130,61 +130,61 @@ export async function updateTask(formData: FormData) {
   revalidatePath("/dashboard", "layout");
 }
 
-export async function toggleTaskComplete(formData: FormData) {
+// Takes the fields needed for the recurring-spawn branch directly from the
+// caller (which already has them — it's the same task object rendered on
+// screen) instead of re-SELECTing the row first. That turns the common,
+// highest-frequency case (checking a non-recurring task) into a single
+// round trip instead of a SELECT-then-UPDATE pair.
+export async function toggleTaskComplete(input: {
+  id: string;
+  completed: boolean;
+  listId: string;
+  title: string;
+  notes: string | null;
+  dueDate: string | null;
+  priority: Priority;
+  recurrence: Recurrence;
+  parentTaskId: string | null;
+  tagIds: string[];
+}) {
   const { userId } = await verifySession();
-  const taskId = formData.get("taskId") as string;
-
   const supabase = await createClient();
-  const { data: task } = await supabase
-    .from("tasks")
-    .select("completed, list_id, parent_task_id, title, notes, due_date, priority, recurrence")
-    .eq("id", taskId)
-    .eq("user_id", userId)
-    .single();
-  if (!task) return;
-
-  const nextCompleted = !task.completed;
 
   await supabase
     .from("tasks")
     .update({
-      completed: nextCompleted,
-      completed_at: nextCompleted ? new Date().toISOString() : null,
+      completed: input.completed,
+      completed_at: input.completed ? new Date().toISOString() : null,
     })
-    .eq("id", taskId)
+    .eq("id", input.id)
     .eq("user_id", userId);
 
-  if (nextCompleted) {
-    await captureServerEvent(userId, "task_completed");
+  if (input.completed) {
+    captureServerEvent(userId, "task_completed");
 
     // Recurring task: spawn the next occurrence. Skipped for subtasks (they
     // don't have their own recurrence UI) and tasks with no due date (there's
     // nothing to advance). Deliberately not plan-limit-gated — this is a
     // continuation of an existing commitment, not a new task the user chose
     // to add beyond their plan.
-    if (task.recurrence !== "none" && task.due_date && !task.parent_task_id) {
-      const { data: existingTags } = await supabase
-        .from("task_tags")
-        .select("tag_id")
-        .eq("task_id", taskId);
-
+    if (input.recurrence !== "none" && input.dueDate && !input.parentTaskId) {
       const { data: nextTask } = await supabase
         .from("tasks")
         .insert({
           user_id: userId,
-          list_id: task.list_id,
-          title: task.title,
-          notes: task.notes,
-          due_date: nextDueDate(task.due_date, task.recurrence),
-          priority: task.priority,
-          recurrence: task.recurrence,
+          list_id: input.listId,
+          title: input.title,
+          notes: input.notes,
+          due_date: nextDueDate(input.dueDate, input.recurrence),
+          priority: input.priority,
+          recurrence: input.recurrence,
         })
         .select("id")
         .single();
 
-      if (nextTask && existingTags && existingTags.length > 0) {
+      if (nextTask && input.tagIds.length > 0) {
         await supabase.from("task_tags").insert(
-          existingTags.map((t) => ({ task_id: nextTask.id, tag_id: t.tag_id })),
+          input.tagIds.map((tagId) => ({ task_id: nextTask.id, tag_id: tagId })),
         );
       }
     }
@@ -270,7 +270,7 @@ export async function bulkCompleteTasks(taskIds: string[]) {
     .in("id", taskIds)
     .eq("user_id", userId);
 
-  await captureServerEvent(userId, "task_completed", { bulk: true, count: taskIds.length });
+  captureServerEvent(userId, "task_completed", { bulk: true, count: taskIds.length });
   revalidatePath("/dashboard", "layout");
 }
 
@@ -339,6 +339,45 @@ export async function quickCreateTask(title: string, listId?: string) {
   if (!targetListId) return;
 
   await supabase.from("tasks").insert({ user_id: userId, list_id: targetListId, title: trimmed });
-  await captureServerEvent(userId, "task_created", { via: "command_palette" });
+  captureServerEvent(userId, "task_created", { via: "command_palette" });
+  revalidatePath("/dashboard", "layout");
+}
+
+// Context-menu "Duplicate": copies title/notes/date/priority/recurrence and
+// tags. Subtasks aren't copied — treated the same as the delete/undo
+// snapshot's scope, to keep this a shallow, predictable copy.
+export async function duplicateTask(taskId: string) {
+  const { userId } = await verifySession();
+  const supabase = await createClient();
+
+  const { data: original } = await supabase
+    .from("tasks")
+    .select("list_id, title, notes, due_date, priority, recurrence")
+    .eq("id", taskId)
+    .eq("user_id", userId)
+    .single();
+  if (!original) return;
+
+  if (!(await isProUser())) {
+    const activeCount = await countActiveTasks(userId);
+    if (activeCount >= FREE_PLAN_ACTIVE_TASK_LIMIT) return;
+  }
+
+  const { data: copy } = await supabase
+    .from("tasks")
+    .insert({ ...original, user_id: userId, title: `${original.title} (copy)` })
+    .select("id")
+    .single();
+
+  if (copy) {
+    const { data: tags } = await supabase.from("task_tags").select("tag_id").eq("task_id", taskId);
+    if (tags && tags.length > 0) {
+      await supabase
+        .from("task_tags")
+        .insert(tags.map((t) => ({ task_id: copy.id, tag_id: t.tag_id })));
+    }
+  }
+
+  captureServerEvent(userId, "task_created", { via: "duplicate" });
   revalidatePath("/dashboard", "layout");
 }

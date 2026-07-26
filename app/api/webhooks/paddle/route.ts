@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       });
 
-      await captureServerEvent(
+      captureServerEvent(
         userId,
         event.eventType === EventName.SubscriptionCreated
           ? "subscription_activated"
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         })
         .eq("user_id", userId);
 
-      await captureServerEvent(userId, "subscription_canceled");
+      captureServerEvent(userId, "subscription_canceled");
       break;
     }
 

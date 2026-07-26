@@ -1,10 +1,15 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
 export type List = Database["public"]["Tables"]["lists"]["Row"];
 
-export async function getLists(userId: string): Promise<List[]> {
+// cache()'d because the layout (sidebar), the page (task board), and the
+// task detail panel each need the list of lists independently — without
+// this every one of those calls was a separate Supabase round trip for
+// identical data within the same render pass.
+export const getLists = cache(async (userId: string): Promise<List[]> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("lists")
@@ -13,12 +18,12 @@ export async function getLists(userId: string): Promise<List[]> {
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: true });
   return data ?? [];
-}
+});
 
-export async function getListById(
+export const getListById = cache(async (
   userId: string,
   listId: string,
-): Promise<List | null> {
+): Promise<List | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("lists")
@@ -27,7 +32,7 @@ export async function getListById(
     .eq("id", listId)
     .single();
   return data ?? null;
-}
+});
 
 export async function getDefaultListId(userId: string): Promise<string | null> {
   const lists = await getLists(userId);

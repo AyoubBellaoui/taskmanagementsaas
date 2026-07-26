@@ -10,6 +10,55 @@ const OPEN_EVENT = "flowlist:open-command-palette";
 
 type SearchResult = { id: string; title: string; list_id: string; completed: boolean };
 
+const SHORTCUTS: { keys: string; label: string }[] = [
+  { keys: "⌘/Ctrl K", label: "Open command palette" },
+  { keys: "N", label: "Open command palette" },
+  { keys: "1", label: "Go to All tasks" },
+  { keys: "2", label: "Go to Today" },
+  { keys: "3", label: "Go to Upcoming" },
+  { keys: "4", label: "Go to Calendar" },
+  { keys: "?", label: "Show this list" },
+  { keys: "Esc", label: "Close a panel or menu" },
+  { keys: "Right-click a task", label: "Open / Duplicate / Move / Delete" },
+];
+
+function ShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="animate-overlay-in absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <div className="animate-palette-in relative w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            Keyboard shortcuts
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex flex-col gap-2 p-4">
+          {SHORTCUTS.map((s) => (
+            <div key={s.label + s.keys} className="flex items-center justify-between gap-4">
+              <span className="text-sm text-slate-600 dark:text-slate-300">{s.label}</span>
+              <kbd className="shrink-0 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                {s.keys}
+              </kbd>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const itemClass =
   "cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-700 aria-selected:bg-indigo-50 aria-selected:text-indigo-700 dark:text-slate-200 dark:aria-selected:bg-indigo-500/10 dark:aria-selected:text-indigo-300";
 const groupHeadingClass =
@@ -24,6 +73,7 @@ export function CommandPalette({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [, startTransition] = useTransition();
@@ -49,7 +99,7 @@ export function CommandPalette({
         !!target &&
         (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable);
 
-      if (typing || open || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (typing || open || shortcutsOpen || e.metaKey || e.ctrlKey || e.altKey) return;
 
       if (e.key === "1") {
         e.preventDefault();
@@ -66,12 +116,15 @@ export function CommandPalette({
       } else if (e.key.toLowerCase() === "n") {
         e.preventDefault();
         setOpen(true);
+      } else if (e.key === "?") {
+        e.preventDefault();
+        setShortcutsOpen(true);
       }
     }
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, router]);
+  }, [open, shortcutsOpen, router]);
 
   useEffect(() => {
     // Stale results from a previous query are harmless to leave in state —
@@ -97,14 +150,15 @@ export function CommandPalette({
   );
 
   return (
-    <Command.Dialog
-      open={open}
-      onOpenChange={setOpen}
-      label="Command palette"
-      className="relative"
-      overlayClassName="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-[2px] animate-overlay-in"
-      contentClassName="fixed left-1/2 top-24 z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-palette-in dark:border-slate-800 dark:bg-slate-900"
-    >
+    <>
+      <Command.Dialog
+        open={open}
+        onOpenChange={setOpen}
+        label="Command palette"
+        className="relative"
+        overlayClassName="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-[2px] animate-overlay-in"
+        contentClassName="fixed left-1/2 top-24 z-50 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-palette-in dark:border-slate-800 dark:bg-slate-900"
+      >
       <Command.Input
         value={query}
         onValueChange={setQuery}
@@ -181,6 +235,9 @@ export function CommandPalette({
         </Command.Group>
       </Command.List>
     </Command.Dialog>
+
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+    </>
   );
 }
 
