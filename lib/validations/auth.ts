@@ -27,6 +27,7 @@ export type SignupState =
         password?: string[];
       };
       message?: string;
+      success?: boolean;
     }
   | undefined;
 

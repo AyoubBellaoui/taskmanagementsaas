@@ -18,8 +18,14 @@ export default function SignupPage() {
         </p>
       </div>
 
-      {state?.message && !state?.errors && (
+      {state?.message && state?.success && (
         <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          {state.message}
+        </p>
+      )}
+
+      {state?.message && !state?.success && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {state.message}
         </p>
       )}

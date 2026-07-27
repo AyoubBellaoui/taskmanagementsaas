@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { AuthError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { captureServerEvent } from "@/lib/posthog-server";
 import {
@@ -9,6 +10,21 @@ import {
   type LoginState,
   type SignupState,
 } from "@/lib/validations/auth";
+
+// Supabase's raw error.message is written for developers, not end users
+// (e.g. "email rate limit exceeded" — no indication of what to actually do).
+// Map the codes we can act on to something a user can follow.
+function signupErrorMessage(error: AuthError): string {
+  switch (error.code) {
+    case "over_email_send_rate_limit":
+      return "Too many signup attempts in a short time — please wait a few minutes before trying again.";
+    case "user_already_exists":
+    case "email_exists":
+      return "This email is already registered. Try logging in instead.";
+    default:
+      return error.message;
+  }
+}
 
 export async function signup(
   _state: SignupState,
@@ -37,7 +53,16 @@ export async function signup(
   });
 
   if (error) {
-    return { message: error.message };
+    return { message: signupErrorMessage(error) };
+  }
+
+  // Supabase returns a fake "success" with no error and an empty
+  // `identities` array when signUp() targets an email that's already
+  // registered and confirmed — this is intentional, to stop signup being
+  // used to enumerate accounts. No email is actually sent in that case, so
+  // saying "check your email" here would be a lie.
+  if (data.user && data.user.identities?.length === 0) {
+    return { message: "This email is already registered. Try logging in instead." };
   }
 
   if (data.user) {
@@ -48,6 +73,7 @@ export async function signup(
   // session exists (see app/auth/confirm/route.ts).
   return {
     message: "Check your email to confirm your account before signing in.",
+    success: true,
   };
 }
 
