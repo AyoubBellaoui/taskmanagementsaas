@@ -18,6 +18,7 @@ npm install
    ```
    {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/dashboard
    ```
+   This template uses `{{ .SiteURL }}`, which Supabase fills in from **Authentication → URL Configuration → Site URL** — not from the app's `NEXT_PUBLIC_SITE_URL` env var. When you deploy, update **Site URL** there to your production domain (e.g. `https://your-app.vercel.app`), or confirmation emails will keep linking to whatever it was last set to (`http://localhost:3000` by default). Also add your production domain to **Redirect URLs** in the same settings page.
 4. Copy your project's URL, anon key, and service role key from **Project Settings → API** into `.env.local` (see step 5).
 
 ### 3. Paddle
@@ -39,6 +40,8 @@ cp .env.example .env.local
 ```
 
 Fill in every value in `.env.local` from the steps above.
+
+When deploying (e.g. to Vercel), also set `NEXT_PUBLIC_SITE_URL` to your production URL in the host's environment variable settings for the Production environment — it's inlined at build time, so a redeploy is needed after changing it.
 
 ### 6. Run
 
